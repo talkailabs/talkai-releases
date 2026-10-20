@@ -1,9 +1,10 @@
 # Publishes Talkai's releases. This public repository builds them from the
 # private source with its own pipeline (free for public repositories), so every
-# release is created by github-actions[bot]. Every hour it looks for the newest
+# release is created by github-actions[bot]. Every 15 minutes it looks for the newest
 # version tag in the source; if that tag has no release here yet, it tests and
 # builds it, publishes it, then installs it on all four platforms exactly as a
-# customer would. A failed run is retried by the next hourly run.
+# customer would. A failed run is retried by the next scheduled run. (Runs
+# start only on this schedule: a manual start would show who started it.)
 #
 # Secrets (GitHub masks them in logs):
 #   SOURCE_REPO        owner/name of the private source repository
@@ -12,7 +13,7 @@ name: Release
 
 on:
   schedule:
-    - cron: "17 * * * *"
+    - cron: "2,17,32,47 * * * *"
   workflow_dispatch:
 
 permissions:
