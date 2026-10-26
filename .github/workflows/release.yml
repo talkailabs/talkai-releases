@@ -1,10 +1,10 @@
 # Publishes Talkai's releases. This public repository builds them from the
-# private source with its own pipeline (free for public repositories), so every
-# release is created by github-actions[bot]. Every 15 minutes it looks for the newest
-# version tag in the source; if that tag has no release here yet, it tests and
-# builds it, publishes it, then installs it on all four platforms exactly as a
-# customer would. A failed run is retried by the next scheduled run. (Runs
-# start only on this schedule: a manual start would show who started it.)
+# private source with its own pipeline (free for public repositories): the
+# Talkai Labs release app starts it for a version tag (scripts/release.sh in
+# the source), so runs show the app and releases github-actions[bot] — never a
+# person. It tests and builds that tag, publishes it, then installs it on all
+# four platforms exactly as a customer would. Without a tag it takes the
+# newest one in the source that has no release yet.
 #
 # Secrets (GitHub masks them in logs):
 #   SOURCE_REPO        owner/name of the private source repository
@@ -12,9 +12,11 @@
 name: Release
 
 on:
-  schedule:
-    - cron: "2,17,32,47 * * * *"
   workflow_dispatch:
+    inputs:
+      tag:
+        description: "Version tag in the source, e.g. v0.2.1 (empty: the newest unreleased one)"
+        required: false
 
 permissions:
   contents: write
@@ -38,8 +40,14 @@ jobs:
       - id: find
         env:
           GH_TOKEN: ${{ github.token }}
+          WANT: ${{ inputs.tag }}
         run: |
-          tag=$(git -C src tag --list 'v*' --sort=-creatordate | head -n 1)
+          if [ -n "$WANT" ]; then
+            git -C src rev-parse -q --verify "refs/tags/$WANT" >/dev/null || { echo "No tag $WANT in the source."; exit 1; }
+            tag=$WANT
+          else
+            tag=$(git -C src tag --list 'v*' --sort=-creatordate | head -n 1)
+          fi
           if [ -z "$tag" ]; then echo "No version tags yet."; exit 0; fi
           if gh release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
             echo "$tag is already released."
@@ -80,6 +88,8 @@ jobs:
           shasum -a 256 -c SHA256SUMS
           test "$(ls talkai_*.tar.gz | wc -l | tr -d ' ')" = 4
           test -f Talkai_*_macOS.zip
+          # Voice works after the one-line install only if the Mac archives carry the microphone helper.
+          for f in talkai_*_darwin_*.tar.gz; do tar -tzf "$f" | grep -q '/talkai-mac$' || { echo "$f has no talkai-mac"; exit 1; }; done
           # Nothing published may name the private source or its owner.
           mkdir -p ../scan && for f in *.tar.gz; do tar -xzf "$f" -C ../scan; done && unzip -q Talkai_*_macOS.zip -d ../scan
           if grep -rl -e "$SOURCE_REPO" -e "${SOURCE_REPO%%/*}" ../scan; then

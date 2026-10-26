@@ -91,6 +91,13 @@ mkdir -p "$DIR"
 cp "$TMP/talkai_${V}_${OS}_${ARCH}/talkai" "$DIR/.talkai.new"
 chmod 755 "$DIR/.talkai.new"
 mv -f "$DIR/.talkai.new" "$DIR/talkai"
+# macOS: the microphone helper (for `talkai voice`) goes next to talkai.
+if [ -f "$TMP/talkai_${V}_${OS}_${ARCH}/talkai-mac" ]; then
+	cp "$TMP/talkai_${V}_${OS}_${ARCH}/talkai-mac" "$DIR/.talkai-mac.new"
+	chmod 755 "$DIR/.talkai-mac.new"
+	mv -f "$DIR/.talkai-mac.new" "$DIR/talkai-mac"
+	say "  microphone helper installed (macOS asks for microphone permission the first time you use voice)"
+fi
 "$DIR/talkai" version >/dev/null 2>&1 || die "the installed talkai doesn't run on this machine"
 say "  installed: $("$DIR/talkai" version)"
 
